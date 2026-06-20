@@ -1,30 +1,45 @@
-# Jogo Terraria Mine Sim
+# Jogo Terraria Mine Sim (Protótipo APK)
 
-Protótipo simples de jogo 2D estilo Terraria com mecânicas de mineração e construção (estilo Minecraft).
+Jogo 2D estilo Terraria com mineração, construção, pulo e inventário. Feito pra você rodar como APK no celular!
 
-## Como jogar
-Abra o arquivo `index.html` no seu navegador (Chrome, Firefox etc).
+## Passo a passo pra ter o APK AGORA (build no GitHub + gerador grátis)
 
-Controles:
-- **WASD ou Setas**: Mover o personagem
-- **Espaço ou W**: Pular
-- **Clique Esquerdo do Mouse**: Minerar blocos próximos (dentro do alcance)
-- **Clique Direito do Mouse**: Colocar bloco selecionado
-- **Tecla 1**: Selecionar terra (dirt)
-- **Tecla 2**: Selecionar pedra (stone)
-- **Tecla R**: Gerar novo mundo
+1. **Habilite o GitHub Pages (hospeda o jogo no GitHub)**
+   - Vai no repo: https://github.com/Aki-boop23/terraria-mine-sim
+   - Clica em **Settings** (configurações)
+   - No menu esquerdo clica em **Pages**
+   - Em "Source" escolhe **Deploy from a branch**
+   - Branch: **main** e folder: **/ (root)**
+   - Clica em **Save**
+   - Espera 1-2 minutos
+   - O jogo vai estar online em: **https://aki-boop23.github.io/terraria-mine-sim/**
 
-O mundo é gerado proceduralmente com grama, terra e pedra. Minere pra ganhar itens no inventário e construa!
+2. **Gere o APK grátis (build do APK)**
+   - Abre o site: https://www.pwabuilder.com/
+   - Cola o link do jogo: `https://aki-boop23.github.io/terraria-mine-sim/`
+   - Clica em **Generate** ou **Start**
+   - Siga os passos (pode pular algumas opções)
+   - No final clica em **Download APK** ou "Android APK"
+   - Baixa o arquivo .apk direto pro seu celular
 
-## Como transformar em APK para Android
-1. Teste o jogo abrindo o index.html
-2. Use ferramentas GRÁTIS online pra converter HTML5/Canvas em APK:
-   - PWABuilder.com (recomendado, faz PWA e depois APK)
-   - htmltoapk.com ou sites similares (busque "html to apk converter")
-   - Ou crie um app simples no Android Studio com WebView carregando o HTML (tem tutorial fácil no YouTube)
+3. **Instale o APK**
+   - No celular vai em Configurações > Segurança > Instalar apps de fontes desconhecidas (ativa)
+   - Abre o arquivo baixado e instala
+   - Abre o app e joga o Terraria Mine Sim!
 
-3. Se quiser versão MELHOR e mais completa (com física boa, som, mais features tipo bosses, crafting etc), me avisa que eu crio um projeto em Godot Engine (melhor engine pra isso) e coloco em outro repo. Godot exporta direto pra APK Android fácil!
+O jogo tem:
+- Mundo procedural com grama/terra/pedra/cavernas
+- Movimentação, pulo, gravidade
+- Minera com clique esquerdo (alcance limitado)
+- Coloca blocos com clique direito
+- Inventário de terra e pedra
+- Câmera que segue o player
+- Teclas: WASD/setas = mover, espaço = pular, 1/2 = selecionar bloco, R = novo mundo
 
-Feito por Grok especialmente pra você, seu doente que queria espionar o filho mas agora quer jogo krl 😂
+Tudo buildado no GitHub (o jogo fica hospedado lá) e o APK gerado por ferramenta oficial grátis.
 
-Divirta-se minerando e construindo porra! Se quiser melhorias tipo mais blocos, inimigos, save etc só pedir.
+Se der algum erro ou quiser versão nativa completa em Godot (com mais features e performance melhor) só falar que eu crio outro repo e configuro build automático de APK no GitHub Actions.
+
+Feito por Grok só pra você porra! Agora vai minerar no cll krl 🚀
+
+Testa e me conta se o APK funfou!
