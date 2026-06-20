@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terraria Mine Sim - Protótipo</title>
+    <style>
+        body { margin: 0; background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { border: 2px solid #fff; image-rendering: pixelated; }
+    </style>
+</head>
+<body>
+    <canvas id="game" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+
+        const TILE_SIZE = 20;
+        const WORLD_W = 80;
+        const WORLD_H = 50;
+
+        let world = [];
+        let player = { x: 200, y: 300, vx: 0, vy: 0, w: 20, h: 40 };
+        let keys = {};
+        let inventory = { dirt: 50, stone: 30 };
+        let selectedBlock = 'dirt';
+        let cameraX = 0;
+        let cameraY = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+
+        function generateWorld() {
+            world = Array.from({ length: WORLD_W }, () => Array(WORLD_H).fill(0));
+            for (let x = 0; x < WORLD_W; x++) {
+                let height = 18 + Math.floor(Math.sin(x / 6) * 4);
+                for (let y = 0; y < WORLD_H; y++) {
+                    if (y > height + 8) {
+                        world[x][y] = 2; // stone
+                    } else if (y > height) {
+                        world[x][y] = 1; // dirt
+                    } else if (y === height) {
+                        world[x][y] = 3; // grass
+                    } else {
+                        world[x][y] = 0; // air
+                    }
+                }
+            }
+            // add some random caves simple
+            for (let i = 0; i < 15; i++) {
+                let cx = Math.floor(Math.random() * WORLD_W);
+                let cy = Math.floor(Math.random() * (WORLD_H - 10)) + 10;
+                for (let dx = -3; dx <= 3; dx++) {
+                    for (let dy = -2; dy <= 2; dy++) {
+                        let tx = cx + dx;
+                        let ty = cy + dy;
+                        if (tx > 0 && tx < WORLD_W && ty > 0 && ty < WORLD_H) {
+                            if (Math.random() > 0.3) world[tx][ty] = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        function getTile(wx, wy) {
+            let tx = Math.floor(wx / TILE_SIZE);
+            let ty = Math.floor(wy / TILE_SIZE);
+            if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) return 0;
+            return world[tx][ty];
+        }
+
+        function setTile(wx, wy, val) {
+            let tx = Math.floor(wx / TILE_SIZE);
+            let ty = Math.floor(wy / TILE_SIZE);
+            if (tx >= 0 && tx < WORLD_W && ty >= 0 && ty < WORLD_H) {
+                world[tx][ty] = val;
+            }
+        }
+
+        function isSolidAt(x, y) {
+            return getTile(x, y) > 0;
+        }
+
+        function updatePlayer() {
+            // gravity
+            player.vy += 0.6;
+            if (player.vy > 12) player.vy = 12;
+
+            // horizontal movement
+            let moveSpeed = 5;
+            if (keys['a'] || keys['ArrowLeft']) player.vx = -moveSpeed;
+            else if (keys['d'] || keys['ArrowRight']) player.vx = moveSpeed;
+            else player.vx *= 0.7;
+
+            // jump
+            if ((keys['w'] || keys['ArrowUp'] || keys[' ']) && isOnGround()) {
+                player.vy = -13;
+                keys[' '] = false; // prevent hold jump
+            }
+
+            // X collision
+            player.x += player.vx;
+            if (isSolidAt(player.x, player.y) || isSolidAt(player.x + player.w - 1, player.y) ||
+                isSolidAt(player.x, player.y + player.h - 1) || isSolidAt(player.x + player.w - 1, player.y + player.h - 1)) {
+                player.x -= player.vx;
+                player.vx = 0;
+            }
+
+            // Y collision
+            player.y += player.vy;
+            let onGround = false;
+            if (isSolidAt(player.x, player.y + player.h) || isSolidAt(player.x + player.w - 1, player.y + player.h)) {
+                player.y = Math.floor((player.y + player.h) / TILE_SIZE) * TILE_SIZE - player.h;
+                player.vy = 0;
+                onGround = true;
+            }
+            if (isSolidAt(player.x, player.y) || isSolidAt(player.x + player.w - 1, player.y)) {
+                player.y = Math.ceil(player.y / TILE_SIZE) * TILE_SIZE;
+                player.vy = 0;
+            }
+
+            // keep in world bounds rough
+            if (player.x < 0) player.x = 0;
+            if (player.x > WORLD_W * TILE_SIZE - player.w) player.x = WORLD_W * TILE_SIZE - player.w;
+        }
+
+        function isOnGround() {
+            return isSolidAt(player.x, player.y + player.h + 2) || isSolidAt(player.x + player.w - 1, player.y + player.h + 2);
+        }
+
+        function draw() {
+            // sky
+            ctx.fillStyle = '#5DADE2';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // update camera
+            cameraX = player.x - canvas.width / 2 + player.w / 2;
+            cameraY = player.y - canvas.height / 2 + player.h / 2;
+
+            // clamp camera
+            cameraX = Math.max(0, Math.min(cameraX, WORLD_W * TILE_SIZE - canvas.width));
+            cameraY = Math.max(0, Math.min(cameraY, WORLD_H * TILE_SIZE - canvas.height));
+
+            // draw tiles
+            let startTileX = Math.floor(cameraX / TILE_SIZE) - 1;
+            let endTileX = Math.floor((cameraX + canvas.width) / TILE_SIZE) + 2;
+            let startTileY = Math.floor(cameraY / TILE_SIZE) - 1;
+            let endTileY = Math.floor((cameraY + canvas.height) / TILE_SIZE) + 2;
+
+            for (let x = Math.max(0, startTileX); x < Math.min(WORLD_W, endTileX); x++) {
+                for (let y = Math.max(0, startTileY); y < Math.min(WORLD_H, endTileY); y++) {
+                    let tile = world[x][y];
+                    if (tile === 0) continue;
+
+                    let sx = x * TILE_SIZE - cameraX;
+                    let sy = y * TILE_SIZE - cameraY;
+
+                    if (tile === 1) ctx.fillStyle = '#8B4513'; // dirt
+                    else if (tile === 2) ctx.fillStyle = '#555555'; // stone
+                    else if (tile === 3) ctx.fillStyle = '#2E8B57'; // grass
+
+                    ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#222';
+                    ctx.strokeRect(sx, sy, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            // draw player (simple character)
+            let px = player.x - cameraX;
+            let py = player.y - cameraY;
+            ctx.fillStyle = '#F4D03F';
+            ctx.fillRect(px, py, player.w, player.h);
+            // head
+            ctx.fillStyle = '#E67E22';
+            ctx.fillRect(px + 2, py - 12, 16, 14);
+            // eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(px + 5, py - 8, 3, 3);
+            ctx.fillRect(px + 12, py - 8, 3, 3);
+
+            // UI
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText('INVENTÁRIO:  [1] Terra: ' + inventory.dirt + '   [2] Pedra: ' + inventory.stone, 10, 30);
+            ctx.fillText('Selecionado: ' + selectedBlock.toUpperCase() + '   |  Clique Esq: Minera  |  Dir: Coloca  |  R: Novo Mundo', 10, 55);
+
+            // mouse tile highlight
+            let worldMouseX = mouseX + cameraX;
+            let worldMouseY = mouseY + cameraY;
+            let tileX = Math.floor(worldMouseX / TILE_SIZE) * TILE_SIZE - cameraX;
+            let tileY = Math.floor(worldMouseY / TILE_SIZE) * TILE_SIZE - cameraY;
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+            ctx.lineWidth = 1;
+        }
+
+        function mineAtMouse() {
+            let worldMouseX = mouseX + cameraX;
+            let worldMouseY = mouseY + cameraY;
+            let tx = Math.floor(worldMouseX / TILE_SIZE);
+            let ty = Math.floor(worldMouseY / TILE_SIZE);
+            if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) return;
+
+            let tile = world[tx][ty];
+            if (tile > 0) {
+                // range check ~6 tiles
+                let px = Math.floor(player.x / TILE_SIZE);
+                let py = Math.floor(player.y / TILE_SIZE);
+                if (Math.abs(tx - px) > 6 || Math.abs(ty - py) > 6) return;
+
+                world[tx][ty] = 0;
+                if (tile === 1 || tile === 3) inventory.dirt++;
+                else if (tile === 2) inventory.stone++;
+            }
+        }
+
+        function placeAtMouse() {
+            let worldMouseX = mouseX + cameraX;
+            let worldMouseY = mouseY + cameraY;
+            let tx = Math.floor(worldMouseX / TILE_SIZE);
+            let ty = Math.floor(worldMouseY / TILE_SIZE);
+            if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) return;
+
+            if (world[tx][ty] === 0) {
+                let px = Math.floor(player.x / TILE_SIZE);
+                let py = Math.floor(player.y / TILE_SIZE);
+                if (Math.abs(tx - px) > 6 || Math.abs(ty - py) > 6) return;
+
+                if (selectedBlock === 'dirt' && inventory.dirt > 0) {
+                    world[tx][ty] = 1;
+                    inventory.dirt--;
+                } else if (selectedBlock === 'stone' && inventory.stone > 0) {
+                    world[tx][ty] = 2;
+                    inventory.stone--;
+                }
+            }
+        }
+
+        // Input
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === '1') selectedBlock = 'dirt';
+            if (e.key === '2') selectedBlock = 'stone';
+            if (e.key.toLowerCase() === 'r') {
+                generateWorld();
+                player.x = 200;
+                player.y = 300;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.offsetX;
+            mouseY = e.offsetY;
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // left
+                mineAtMouse();
+            } else if (e.button === 2) { // right
+                e.preventDefault();
+                placeAtMouse();
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        function gameLoop() {
+            updatePlayer();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Init
+        generateWorld();
+        player.x = 15 * TILE_SIZE;
+        player.y = 15 * TILE_SIZE;
+        gameLoop();
+
+        // Easter egg: press P for more dirt
+        window.addEventListener('keypress', (e) => {
+            if (e.key.toLowerCase() === 'p') inventory.dirt += 20;
+        });
+    </script>
+</body>
+</html>
